@@ -7,10 +7,14 @@ import subprocess
 class Lauf:
     def __init__(self):
         self.screen = curses.initscr()
+
         curses.noecho()
         curses.cbreak()
         curses.curs_set(False)
         curses.use_default_colors()
+
+        curses.init_pair(1, curses.COLOR_MAGENTA, -1)
+
         self.height, self.width = self.screen.getmaxyx()
 
         self.path = self.old_path = os.getcwd()
@@ -18,6 +22,8 @@ class Lauf:
 
         self.position = self.old_position = 0
         self.offset = self.old_offset = 0
+
+        self.show_hidden = False
 
     def moveDown(self):
         if self.position + self.offset + 1 >= len(self.files):
@@ -81,9 +87,9 @@ class Lauf:
             subprocess.run([os.getenv("EDITOR", "vi"), self.files[self.offset:self.height - 2 + self.offset][self.position]])
             self.update()
 
-    def resize(self):
-        self.height, self.width = self.screen.getmaxyx()
-        self.screen.resize(self.height, self.width)
+    def toggle_hidden(self):
+        self.show_hidden = not self.show_hidden
+        self.files = os.listdir(self.path)
 
     def write_cd(self):
         with open(os.getenv("XDG_CACHE_HOME", os.getenv("HOME") + "/.cache") + "/.lauf_d", "w") as f:
@@ -92,13 +98,15 @@ class Lauf:
     def update(self):
         self.screen.erase()
 
+        if not self.show_hidden:
+            self.files = [file for file in self.files if not file.startswith(".")]
         self.files.sort()
         files = self.files[self.offset:self.height - 2 + self.offset]
         for i, file in enumerate(files):
             if len(file) >= self.width-1:
                 file = file[:self.width-1]
             if i == self.position:
-                self.screen.addstr(i, 1, file, curses.A_REVERSE)
+                self.screen.addstr(i, 1, file, curses.color_pair(1) | curses.A_REVERSE)
             else:
                 self.screen.addstr(i, 1, file)
 
@@ -112,6 +120,10 @@ class Lauf:
         self.screen.addstr(self.height-2, 0, barText, curses.A_REVERSE)
 
         self.screen.refresh()
+
+    def resize(self):
+        self.height, self.width = self.screen.getmaxyx()
+        self.screen.resize(self.height, self.width)
 
 
 def main(main_screen):
@@ -136,6 +148,8 @@ def main(main_screen):
             lauf.upDir()
         elif k == ord("l"):
             lauf.enter()
+        elif k == ord("."):
+            lauf.toggle_hidden()
 
         lauf.update()
         k = lauf.screen.getch()
