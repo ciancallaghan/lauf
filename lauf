@@ -95,13 +95,21 @@ class Lauf:
         self.files.sort()
         files = self.files[self.offset:self.height - 2 + self.offset]
         for i, file in enumerate(files):
+            if len(file) >= self.width-1:
+                file = file[:self.width-1]
             if i == self.position:
                 self.screen.addstr(i, 1, file, curses.A_REVERSE)
             else:
                 self.screen.addstr(i, 1, file)
 
         # Bar
-        self.screen.addstr(self.height - 2, 0,  " " + self.path + (" " * (self.width - len(self.path) - 1)), curses.A_REVERSE)
+        barText = " " + self.path.replace(os.getenv("HOME"), "~")
+        if len(barText) >= self.width:
+            barText = barText[:self.width]
+        else:
+            barPadding = " " * (self.width - len(barText))
+            barText += barPadding
+        self.screen.addstr(self.height-2, 0, barText, curses.A_REVERSE)
 
         self.screen.refresh()
 
