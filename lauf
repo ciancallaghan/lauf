@@ -25,6 +25,13 @@ class Lauf:
 
         self.show_hidden = False
 
+    def goHome(self):
+        self.path = os.getenv("HOME")
+        self.files = os.listdir(self.path)
+        os.chdir(self.path)
+        self.position = 0
+        self.offset = 0
+
     def moveDown(self):
         if self.position + self.offset + 1 >= len(self.files):
             return
@@ -123,10 +130,10 @@ class Lauf:
             if i == self.position:
                 attr = attr | curses.color_pair(1) | curses.A_REVERSE
 
-            self.screen.addstr(i, 1, file, attr)
+            self.screen.addstr(i, 0, file, attr)
 
         # Bar
-        barText = " " + self.path.replace(os.getenv("HOME"), "~")
+        barText = self.path.replace(os.getenv("HOME"), "~")
         if len(barText) >= self.width:
             barText = barText[:self.width]
         else:
@@ -163,6 +170,8 @@ def main(main_screen):
             lauf.upDir()
         elif k == ord("l"):
             lauf.enter()
+        elif k == ord("~"):
+            lauf.goHome()
         elif k == ord("."):
             lauf.toggle_hidden()
 
