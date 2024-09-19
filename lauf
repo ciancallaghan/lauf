@@ -1,0 +1,128 @@
+#!/usr/bin/env python3
+
+import curses
+import os
+import subprocess
+
+class Lauf:
+    def __init__(self):
+        self.screen = curses.initscr()
+        curses.noecho()
+        curses.cbreak()
+        curses.curs_set(False)
+        curses.use_default_colors()
+        self.height, self.width = self.screen.getmaxyx()
+
+        self.path = self.old_path = os.getcwd()
+        self.files = os.listdir(self.path)
+
+        self.position = self.old_position = 0
+        self.offset = self.old_offset = 0
+
+    def moveDown(self):
+        if self.position + self.offset + 1 >= len(self.files):
+            return
+        if len(self.files) >= self.height - 2:
+            if self.position + 1 >= self.height - 2 and (len(self.files[self.offset:self.height - 2 + self.offset]) == self.height - 2):
+                self.offset += 1
+            else:
+                self.position += 1
+        else:
+            self.position += 1
+
+    def moveUp(self):
+        self.position -= 1
+        if self.position < 0:
+            if self.offset > 0:
+                self.offset -= 1
+            self.position = 0
+
+    def moveTop(self):
+        self.position = 0
+        self.offset = 0
+
+    def moveBottom(self):
+        if len(self.files) >= self.height - 2:
+            self.position = self.height - 3
+            self.offset = len(self.files) - self.height + 2
+        else:
+            self.position = len(self.files) - 1
+
+    def upDir(self):
+        newDir = "/".join(self.path.split("/")[:-1])
+
+        if newDir == self.old_path:
+            self.path, self.old_path = self.old_path, self.path
+            self.position, self.old_position = self.old_position, self.position
+            self.offset, self.old_offset = self.old_offset, self.offset
+        else:
+            self.path, self.old_path = newDir, self.path
+            self.position, self.old_position = 0, self.position
+            self.offset, self.old_offset = 0, self.offset
+
+        os.chdir(self.path)
+        self.files = os.listdir(self.path)
+
+    def enter(self):
+        newPath = self.path + "/" + self.files[self.offset:self.height - 2 + self.offset][self.position]
+        if os.path.isdir(newPath):
+            if newPath == self.old_path:
+                self.path, self.old_path = self.old_path, self.path
+                self.position, self.old_position = self.old_position, self.position
+                self.offset, self.old_offset = self.old_offset, self.offset
+            else:
+                self.path, self.old_path = newPath, self.path
+                self.position, self.old_position = 0, self.position
+                self.offset, self.old_offset = 0, self.offset
+            os.chdir(self.path)
+            self.files = os.listdir(self.path)
+        elif os.path.isfile(newPath):
+            curses.endwin()
+            subprocess.run([os.getenv("EDITOR", "vi"), self.files[self.offset:self.height - 2 + self.offset][self.position]])
+            self.update()
+
+    def resize(self):
+        self.height, self.width = self.screen.getmaxyx()
+        self.screen.resize(self.height, self.width)
+
+    def update(self):
+        self.screen.erase()
+
+        self.files.sort()
+        files = self.files[self.offset:self.height - 2 + self.offset]
+        for i, file in enumerate(files):
+            if i == self.position:
+                self.screen.addstr(i, 1, file, curses.A_REVERSE)
+            else:
+                self.screen.addstr(i, 1, file)
+
+        # Bar
+        self.screen.addstr(self.height - 2, 0,  " " + self.path + (" " * (self.width - len(self.path) - 1)), curses.A_REVERSE)
+
+        self.screen.refresh()
+
+
+def main(main_screen):
+    lauf = Lauf()
+    k = 0
+    while (k != ord("q")):
+        if k == curses.KEY_RESIZE:
+            lauf.resize()
+
+        if k == ord("j"):
+            lauf.moveDown()
+        elif k == ord("k"):
+            lauf.moveUp()
+        elif k == ord("g"):
+            lauf.moveTop()
+        elif k == ord("G"):
+            lauf.moveBottom()
+        elif k == ord("h"):
+            lauf.upDir()
+        elif k == ord("l"):
+            lauf.enter()
+
+        lauf.update()
+        k = lauf.screen.getch()
+
+curses.wrapper(main)
