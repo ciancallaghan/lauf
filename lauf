@@ -166,6 +166,12 @@ def main(main_screen):
             lauf.moveTop()
         elif k == ord("G"):
             lauf.moveBottom()
+        elif k == ord(""):
+            for i in range(5):
+                lauf.moveDown()
+        elif k == ord(""):
+            for i in range(5):
+                lauf.moveUp()
         elif k == ord("h"):
             lauf.upDir()
         elif k == ord("l"):

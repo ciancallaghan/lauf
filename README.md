@@ -10,6 +10,8 @@ File-Manager inspired by [walk](https://github.com/antonmedv/walk) and [fff](htt
 | k | Move up |
 | g | Go to top of list |
 | G | Go to bottom of list |
+| C-d | Move down 5 items |
+| C-u | Move up 5 items |
 | h | Go up a directory |
 | l | Enter a directory or open the file in `$EDITOR` |
 | ~ | Go to `$HOME` |
