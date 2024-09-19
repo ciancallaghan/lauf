@@ -85,6 +85,10 @@ class Lauf:
         self.height, self.width = self.screen.getmaxyx()
         self.screen.resize(self.height, self.width)
 
+    def write_cd(self):
+        with open(os.getenv("XDG_CACHE_HOME", os.getenv("HOME") + "/.cache") + "/.lauf_d", "w") as f:
+            f.write(self.path)
+
     def update(self):
         self.screen.erase()
 
@@ -105,11 +109,14 @@ class Lauf:
 def main(main_screen):
     lauf = Lauf()
     k = 0
-    while (k != ord("q")):
+    while True:
         if k == curses.KEY_RESIZE:
             lauf.resize()
 
-        if k == ord("j"):
+        if k == ord("q"):
+            lauf.write_cd()
+            break
+        elif k == ord("j"):
             lauf.moveDown()
         elif k == ord("k"):
             lauf.moveUp()
