@@ -56,6 +56,8 @@ class Lauf:
 
     def upDir(self):
         newDir = "/".join(self.path.split("/")[:-1])
+        if not newDir:
+            newDir = "/"
 
         if newDir == self.old_path:
             self.path, self.old_path = self.old_path, self.path
@@ -70,7 +72,10 @@ class Lauf:
         self.files = os.listdir(self.path)
 
     def enter(self):
-        newPath = self.path + "/" + self.files[self.offset:self.height - 2 + self.offset][self.position]
+        if self.path == "/":
+            newPath = self.path + self.files[self.offset:self.height - 2 + self.offset][self.position]
+        else:
+            newPath = self.path + "/" + self.files[self.offset:self.height - 2 + self.offset][self.position]
         if os.path.isdir(newPath):
             if newPath == self.old_path:
                 self.path, self.old_path = self.old_path, self.path
@@ -102,13 +107,23 @@ class Lauf:
             self.files = [file for file in self.files if not file.startswith(".")]
         self.files.sort()
         files = self.files[self.offset:self.height - 2 + self.offset]
+
         for i, file in enumerate(files):
+            if os.path.islink(file):
+                file += "@"
+            elif os.path.isdir(file):
+                file += "/"
+            elif os.path.isfile(file) and os.access(file, os.X_OK):
+                file += "*"
+
             if len(file) >= self.width-1:
                 file = file[:self.width-1]
+
+            attr = 0
             if i == self.position:
-                self.screen.addstr(i, 1, file, curses.color_pair(1) | curses.A_REVERSE)
-            else:
-                self.screen.addstr(i, 1, file)
+                attr = attr | curses.color_pair(1) | curses.A_REVERSE
+
+            self.screen.addstr(i, 1, file, attr)
 
         # Bar
         barText = " " + self.path.replace(os.getenv("HOME"), "~")
