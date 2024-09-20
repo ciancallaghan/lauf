@@ -14,6 +14,9 @@ class Lauf:
         curses.use_default_colors()
 
         curses.init_pair(1, curses.COLOR_MAGENTA, -1)
+        curses.init_pair(2, curses.COLOR_YELLOW, -1)
+        curses.init_pair(3, curses.COLOR_BLUE, -1)
+        curses.init_pair(4, curses.COLOR_RED, -1)
 
         self.height, self.width = self.screen.getmaxyx()
 
@@ -24,6 +27,19 @@ class Lauf:
         self.offset = self.old_offset = 0
 
         self.show_hidden = False
+
+        self.to_copy = []
+        self.to_move = []
+        self.to_delete = []
+
+    # TODO
+    def doActions(self):
+        for file in self.to_delete:
+            self.to_delete.remove(file)
+        for file in self.to_copy:
+            self.to_copy.remove(file)
+        for file in self.to_move:
+            self.to_move.remove(file)
 
     def goHome(self):
         self.path = os.getenv("HOME")
@@ -103,6 +119,39 @@ class Lauf:
         self.show_hidden = not self.show_hidden
         self.files = os.listdir(self.path)
 
+    def mark_copy(self):
+        fullPath = self.path + "/" + self.files[self.offset:self.height - 2 + self.offset][self.position]
+        if fullPath in self.to_copy:
+            self.to_copy.remove(fullPath)
+            return
+        elif fullPath in self.to_move:
+            self.to_move.remove(fullPath)
+        elif fullPath in self.to_delete:
+            self.to_delete.remove(fullPath)
+        self.to_copy.append(fullPath)
+
+    def mark_move(self):
+        fullPath = self.path + "/" + self.files[self.offset:self.height - 2 + self.offset][self.position]
+        if fullPath in self.to_copy:
+            self.to_copy.remove(fullPath)
+        elif fullPath in self.to_move:
+            self.to_move.remove(fullPath)
+            return
+        elif fullPath in self.to_delete:
+            self.to_delete.remove(fullPath)
+        self.to_move.append(fullPath)
+
+    def mark_delete(self):
+        fullPath = self.path + "/" + self.files[self.offset:self.height - 2 + self.offset][self.position]
+        if fullPath in self.to_copy:
+            self.to_copy.remove(fullPath)
+        elif fullPath in self.to_move:
+            self.to_move.remove(fullPath)
+        elif fullPath in self.to_delete:
+            self.to_delete.remove(fullPath)
+            return
+        self.to_delete.append(fullPath)
+
     def write_cd(self):
         with open(os.getenv("XDG_CACHE_HOME", os.getenv("HOME") + "/.cache") + "/.lauf_d", "w") as f:
             f.write(self.path)
@@ -116,6 +165,19 @@ class Lauf:
         files = self.files[self.offset:self.height - 2 + self.offset]
 
         for i, file in enumerate(files):
+            fullPath = self.path + "/" + file
+            # File styling
+            attr = 0
+            if i == self.position:
+                attr = attr | curses.A_REVERSE
+            if fullPath in self.to_copy:
+                attr = attr | curses.color_pair(2)
+            elif fullPath in self.to_move:
+                attr = attr | curses.color_pair(3)
+            elif fullPath in self.to_delete:
+                attr = attr | curses.color_pair(4)
+
+            # File types
             if os.path.islink(file):
                 file += "@"
             elif os.path.isdir(file):
@@ -123,12 +185,9 @@ class Lauf:
             elif os.path.isfile(file) and os.access(file, os.X_OK):
                 file += "*"
 
+            # Shorten names
             if len(file) >= self.width-1:
                 file = file[:self.width-1]
-
-            attr = 0
-            if i == self.position:
-                attr = attr | curses.color_pair(1) | curses.A_REVERSE
 
             self.screen.addstr(i, 0, file, attr)
 
@@ -158,6 +217,7 @@ def main(main_screen):
         if k == ord("q"):
             lauf.write_cd()
             break
+        # Movement
         elif k == ord("j"):
             lauf.moveDown()
         elif k == ord("k"):
@@ -172,14 +232,25 @@ def main(main_screen):
         elif k == ord(""):
             for i in range(5):
                 lauf.moveUp()
+        # Directory traversal
+        elif k == ord("~"):
+            lauf.goHome()
         elif k == ord("h"):
             lauf.upDir()
         elif k == ord("l"):
             lauf.enter()
-        elif k == ord("~"):
-            lauf.goHome()
+        # Settings
         elif k == ord("."):
             lauf.toggle_hidden()
+        # File actions
+        elif k == ord("y"):
+            lauf.mark_copy()
+        elif k == ord("m"):
+            lauf.mark_move()
+        elif k == ord("d"):
+            lauf.mark_delete()
+        elif k == ord("p"):
+            lauf.doActions()
 
         lauf.update()
         k = lauf.screen.getch()
